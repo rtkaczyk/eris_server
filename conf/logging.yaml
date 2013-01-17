@@ -1,0 +1,34 @@
+version: 1
+formatters:
+  standard:
+    format: '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
+  location:
+    format: '%(asctime)s [%(name)s] %(levelname)s (%(module)s:%(lineno)s): %(message)s'
+handlers:
+  eris:
+    class : logging.handlers.TimedRotatingFileHandler
+    formatter: location
+    level: DEBUG
+    filename: ${LOGS_DIR}/eris.log
+    when: midnight
+    backupCount: 30
+loggers:
+  eris:
+    level: DEBUG
+    handlers: [eris]
+    propagate: no
+  storage:
+    level: DEBUG
+    handlers: [eris]
+    propagate: no
+  btserver:
+    level: DEBUG
+    handlers: [eris]
+    propagate: no
+  retriever:
+    level: DEBUG
+    handlers: [eris]
+    propagate: no
+root:
+  level: INFO
+  handlers: [eris]

@@ -1,0 +1,34 @@
+package rtkaczyk.eris.bluetooth;
+
+option java_outer_classname = "BtMessages";
+
+message Request {
+  optional fixed64 fr0m = 1;
+  optional fixed64 to = 2;
+  optional int32 limit = 3;
+  optional int32 batch = 4;
+  optional bool full = 5 [default = true];
+}
+
+message Response {
+  optional fixed64 fr0m = 1;
+  optional fixed64 to = 2;
+  repeated Packet packets = 3;
+  optional int32 noPackets = 4;
+  optional Error error = 5;
+}
+
+message Packet {
+  optional fixed64 timestamp = 1;
+  required bytes data = 2;
+}
+
+message Error {
+  enum Code {
+    CONNECTION_ERROR = 0;
+    INVALID_REQUEST = 1;
+    INTERNAL_ERROR = 2;
+  }
+  required Code code = 1;
+  optional string description = 2;
+}

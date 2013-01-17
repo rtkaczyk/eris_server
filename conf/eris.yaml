@@ -1,0 +1,17 @@
+pyro:
+  port: 7017
+  timeout: 5.0
+
+bluetooth:
+  rfcomm_channel: 2
+  batch_size: 10
+
+storage:
+  capacity: 50
+  vacuum_percent: 20.0
+
+retriever:
+  interval: 60
+  mask: .*\.xml
+  time_strategy: BY_NAME
+  feed: ${WORK_DIR}/feed

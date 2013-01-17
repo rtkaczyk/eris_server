@@ -11,7 +11,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='bt.proto',
   package='rtkaczyk.eris.bluetooth',
-  serialized_pb='\n\x08\x62t.proto\x12\x17rtkaczyk.eris.bluetooth\"U\n\x07Request\x12\x0c\n\x04\x66r0m\x18\x01 \x01(\x06\x12\n\n\x02to\x18\x02 \x01(\x06\x12\r\n\x05limit\x18\x03 \x01(\x05\x12\r\n\x05\x62\x61tch\x18\x04 \x01(\x05\x12\x12\n\x04\x66ull\x18\x05 \x01(\x08:\x04true\"\x98\x01\n\x08Response\x12\x0c\n\x04\x66r0m\x18\x01 \x01(\x06\x12\n\n\x02to\x18\x02 \x01(\x06\x12\x30\n\x07packets\x18\x03 \x03(\x0b\x32\x1f.rtkaczyk.eris.bluetooth.Packet\x12\x11\n\tnoPackets\x18\x04 \x01(\x05\x12-\n\x05\x65rror\x18\x05 \x01(\x0b\x32\x1e.rtkaczyk.eris.bluetooth.Error\")\n\x06Packet\x12\x11\n\ttimestamp\x18\x01 \x01(\x06\x12\x0c\n\x04\x64\x61ta\x18\x02 \x02(\x0c\"\x96\x01\n\x05\x45rror\x12\x31\n\x04\x63ode\x18\x01 \x02(\x0e\x32#.rtkaczyk.eris.bluetooth.Error.Code\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\"E\n\x04\x43ode\x12\x14\n\x10\x43ONNECTION_ERROR\x10\x00\x12\x13\n\x0fINVALID_REQUEST\x10\x01\x12\x12\n\x0eINTERNAL_ERROR\x10\x02\x42\x0c\x42\nBtMessages')
+  serialized_pb='\n\x08\x62t.proto\x12\x17rtkaczyk.eris.bluetooth\"T\n\x07Request\x12\x0b\n\x03\x66rm\x18\x01 \x01(\x06\x12\n\n\x02to\x18\x02 \x01(\x06\x12\r\n\x05limit\x18\x03 \x01(\x05\x12\r\n\x05\x62\x61tch\x18\x04 \x01(\x05\x12\x12\n\x04\x66ull\x18\x05 \x01(\x08:\x04true\"\x97\x01\n\x08Response\x12\x0b\n\x03\x66rm\x18\x01 \x01(\x06\x12\n\n\x02to\x18\x02 \x01(\x06\x12\x30\n\x07packets\x18\x03 \x03(\x0b\x32\x1f.rtkaczyk.eris.bluetooth.Packet\x12\x11\n\tnoPackets\x18\x04 \x01(\x05\x12-\n\x05\x65rror\x18\x05 \x01(\x0b\x32\x1e.rtkaczyk.eris.bluetooth.Error\")\n\x06Packet\x12\x11\n\ttimestamp\x18\x01 \x01(\x06\x12\x0c\n\x04\x64\x61ta\x18\x02 \x02(\x0c\"\x96\x01\n\x05\x45rror\x12\x31\n\x04\x63ode\x18\x01 \x02(\x0e\x32#.rtkaczyk.eris.bluetooth.Error.Code\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\"E\n\x04\x43ode\x12\x14\n\x10\x43ONNECTION_ERROR\x10\x00\x12\x13\n\x0fINVALID_REQUEST\x10\x01\x12\x12\n\x0eINTERNAL_ERROR\x10\x02\x42\x0c\x42\nBtMessages')
 
 
 
@@ -36,8 +36,8 @@ _ERROR_CODE = descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=404,
-  serialized_end=473,
+  serialized_start=402,
+  serialized_end=471,
 )
 
 
@@ -49,7 +49,7 @@ _REQUEST = descriptor.Descriptor(
   containing_type=None,
   fields=[
     descriptor.FieldDescriptor(
-      name='fr0m', full_name='rtkaczyk.eris.bluetooth.Request.fr0m', index=0,
+      name='frm', full_name='rtkaczyk.eris.bluetooth.Request.frm', index=0,
       number=1, type=6, cpp_type=4, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
@@ -93,7 +93,7 @@ _REQUEST = descriptor.Descriptor(
   is_extendable=False,
   extension_ranges=[],
   serialized_start=37,
-  serialized_end=122,
+  serialized_end=121,
 )
 
 
@@ -105,7 +105,7 @@ _RESPONSE = descriptor.Descriptor(
   containing_type=None,
   fields=[
     descriptor.FieldDescriptor(
-      name='fr0m', full_name='rtkaczyk.eris.bluetooth.Response.fr0m', index=0,
+      name='frm', full_name='rtkaczyk.eris.bluetooth.Response.frm', index=0,
       number=1, type=6, cpp_type=4, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
@@ -148,8 +148,8 @@ _RESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=125,
-  serialized_end=277,
+  serialized_start=124,
+  serialized_end=275,
 )
 
 
@@ -183,8 +183,8 @@ _PACKET = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=279,
-  serialized_end=320,
+  serialized_start=277,
+  serialized_end=318,
 )
 
 
@@ -219,8 +219,8 @@ _ERROR = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=323,
-  serialized_end=473,
+  serialized_start=321,
+  serialized_end=471,
 )
 
 _RESPONSE.fields_by_name['packets'].message_type = _PACKET

@@ -5,13 +5,16 @@ pyro:
 bluetooth:
   rfcomm_channel: 2
   batch_size: 10
+  timeout: 10.0
 
 storage:
+  timeout: 5.0
   capacity: 50
   vacuum_percent: 20.0
+  delete_sent: false
 
 retriever:
   interval: 60
   mask: .*\.xml
-  time_strategy: BY_NAME
+  timestamp: BY_NAME
   feed: ${WORK_DIR}/feed

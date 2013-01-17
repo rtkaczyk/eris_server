@@ -133,6 +133,15 @@ def channel(s):
         raise ValueError("RFCOMM channel should be in range [1, 30]")
     return c
 
+def boolean(s):
+    b = s.strip().lower()
+    if b == "true":
+        return True
+    elif b == "false":
+        return False
+    else:
+        raise ValueError("Expected boolean")
+
 def directory(s):
     log.debug("directory: [{}]".format(s))
     s = s.replace("${WORK_DIR}", workDir)

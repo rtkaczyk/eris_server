@@ -3,7 +3,7 @@ package rtkaczyk.eris.bluetooth;
 option java_outer_classname = "BtMessages";
 
 message Request {
-  optional fixed64 fr0m = 1;
+  optional fixed64 frm = 1;
   optional fixed64 to = 2;
   optional int32 limit = 3;
   optional int32 batch = 4;
@@ -11,7 +11,7 @@ message Request {
 }
 
 message Response {
-  optional fixed64 fr0m = 1;
+  optional fixed64 frm = 1;
   optional fixed64 to = 2;
   repeated Packet packets = 3;
   optional int32 noPackets = 4;

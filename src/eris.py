@@ -68,8 +68,8 @@ class Eris:
     def put(self, packets):
         self.storage.put(packets)
         
-    def get(self, since = 0, to = 0, limit = None):
-        connId = self.storage.get(since, to, limit)
+    def get(self, since = 0, to = 0, limit = 0):
+        connId, _ = self.storage.get(since, to, limit)
         return self.storage.fetchall(connId)
     
     def count(self):
@@ -89,7 +89,6 @@ class Eris:
 
         os.chdir("/")
         os.setsid()
-        #os.umask(0)
 
         try:
             pid = os.fork()

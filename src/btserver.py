@@ -18,6 +18,7 @@ class BtServer(threading.Thread):
         conf = config.getSub("bluetooth")
         self.channel = conf.get("rfcomm_channel", cast = config.channel, default = 2)
         self.batch = conf.get("batch_size", cast = config.positiveInt, default = 10)
+        self.timeout = conf.get("timeout", cast = config.positiveFloat, default = 10.0)
         
         self.running = True
         
@@ -48,6 +49,7 @@ class BtServer(threading.Thread):
                             log.info("Accepted connection from: " + str(client_info))
                 
                 self.client_sock.setblocking(1)
+                self.client_sock.settimeout(self.timeout)
                 if self.running:
                     self.processRequest()
                 
@@ -76,48 +78,62 @@ class BtServer(threading.Thread):
                 self.closeSockets()
                 
     def processRequest(self):
-        n = self.readLen(self.client_sock)
-        log.debug("Request is {} bytes long".format(n))
-        serialized = self.client_sock.recv(n) if n > 0 else ""
-        request = bt_pb2.Request()
         try:
-            request.ParseFromString(serialized)
-        except:
-            raise InvalidRequest("Couldn't parse request")
-        
-        connId = self.storage.get(request.fr0m, request.to, request.limit)
-        if connId is None:
-            raise InternalError("Database error")
-        
-        batch = request.batch if request.batch > 0 else self.batch
-        full = request.full
-        initial = True
-        while self.running:
-            response = bt_pb2.Response()
-            packets = self.storage.fetch(connId, n = batch)
-            if len(packets) > 0:
-                if not full:
-                    response.to = packets[0][0]
-                    response.fr0m = packets[-1][0]
-                if initial:
-                    response.noPackets = self.storage.rowcount(connId)
-                    initial = False
-                    
-            for (t, data) in packets:
-                packet = response.packets.add()
-                if full:
-                    packet.timestamp = t
-                packet.data = data
-                
-            serialized = response.SerializeToString()
-            self.writeLen(self.client_sock, len(serialized))
-            log.debug("Response is {} bytes long".format(len(serialized)))
-            self.client_sock.send(serialized)
-            if len(packets) == 0:
-                break
+            n = self.readLen(self.client_sock)
+            log.debug("Request is {} bytes long".format(n))
+            serialized = self.client_sock.recv(n) if n > 0 else ""
+            request = bt_pb2.Request()
+            try:
+                request.ParseFromString(serialized)
+            except:
+                raise InvalidRequest("Couldn't parse request")
             
-        log.info("Finishing communications")
-        self.shutdownSock(self.client_sock)
+            connId, packetCount = self.storage.get(request.frm, request.to, request.limit)
+            if connId is None:
+                raise InternalError("Database error")
+            
+            batch = request.batch if request.batch > 0 else self.batch
+            full = request.full
+            initial = True
+            while self.running:
+                response = bt_pb2.Response()
+                packets = self.storage.fetch(connId, n = batch)
+                if len(packets) > 0:
+                    if not full:
+                        response.to = packets[0][0]
+                        response.frm = packets[-1][0]
+                    if initial:
+                        response.noPackets = packetCount
+                        initial = False
+                        
+                for (t, data) in packets:
+                    packet = response.packets.add()
+                    if full:
+                        packet.timestamp = t
+                    packet.data = data
+                    
+                serialized = response.SerializeToString()
+                self.writeLen(self.client_sock, len(serialized))
+                log.debug("Response is {} bytes long".format(len(serialized)))
+                self.client_sock.send(serialized)
+                if len(packets) == 0:
+                    break
+            
+            n = self.readLen(self.client_sock)
+            if n == packetCount:
+                self.writeLen(self.client_sock, 1)
+                log.info("{} packets sent".format(n))
+                self.storage.deleteSent(request.frm, request.to, request.limit)
+            else:
+                log.warn("Client did not respond with correct number of packets. Expected: {}, actual: {}".
+                         format(packetCount, n))
+                self.writeLen(self.client_sock, 0)
+            
+            
+            log.info("Finishing communications")
+            self.shutdownSock(self.client_sock)
+        finally:
+            self.storage.closeConn(connId)
 
     def readLen(self, sock):
         ret = 0
@@ -132,12 +148,12 @@ class BtServer(threading.Thread):
             i += 1
             if byte & 0x80 == 0:
                 break
-            if i > 4:
+            if i > 5:
                 raise InvalidRequest("Request too long")
         return ret
         
     def writeLen(self, sock, n):
-        if n > 2 ** 28 - 1:
+        if n > 2 ** 31 - 1:
             raise InvalidRequest("Response too long")
         i = 0
         while True:
@@ -162,7 +178,6 @@ class BtServer(threading.Thread):
         
     def shutdownSock(self, sock):
         try:
-            sock.settimeout(10.0)
             sock.recv(1)
         except:
             pass

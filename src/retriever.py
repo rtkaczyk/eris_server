@@ -27,7 +27,7 @@ class Retriever(threading.Thread):
         conf = config.getSub("retriever")
         self.interval = conf.get("interval", cast = config.nonNegativeFloat, default = 60.0)
         self.mask = re.compile(conf.get("mask", default = ".*"))
-        self.strategy = conf.get("time_strategy", cast = Retriever.castStrategy, default = BY_MTIME)
+        self.strategy = conf.get("timestamp", cast = Retriever.castStrategy, default = BY_MTIME)
         self.feed = conf.get("feed", cast = config.directory, default = join(config.workDir, "feed"))
         
         self.running = self.interval > 0.0

@@ -134,7 +134,7 @@ def channel(s):
     return c
 
 def boolean(s):
-    b = s.strip().lower()
+    b = str(s).strip().lower()
     if b == "true":
         return True
     elif b == "false":
@@ -143,10 +143,8 @@ def boolean(s):
         raise ValueError("Expected boolean")
 
 def directory(s):
-    log.debug("directory: [{}]".format(s))
     s = s.replace("${WORK_DIR}", workDir)
     s = s.replace("${LOGS_DIR}", logsDir)
     s = s.replace("${CONF_DIR}", confDir)
-    log.debug("directory: [{}]".format(s))
     return s
 

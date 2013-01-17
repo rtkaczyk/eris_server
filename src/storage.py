@@ -10,15 +10,11 @@ class StorageTimeout(Exception): pass
 
 class Storage:
     def __init__(self):
-        self.writeLock = False
-        self.readLock = False
-        self.deleteLock = False
-        self.getsPending = 0
+        self.dbLock = False
         
         conf = config.getSub("storage")
         self.capacity = conf.get("capacity", cast = config.positiveInt, default = 2048)
         self.vacPercent = conf.get("vacuum_percent", cast = config.positivePercent, default = 20.0) / 100
-        self.delSent = conf.get("delete_sent", cast = config.boolean, default = False)
         self.timeout = conf.get("timeout", cast = config.positiveFloat, default = 10.0)
         
         try:
@@ -37,8 +33,8 @@ class Storage:
         if self.size() >= self.capacity:
             log.debug("Size: {}, Capacity: {}".format(self.size(), self.capacity))
             try:
-                self.waitForLocks("rwd")
-                self.setLocks("rwd")
+                self.waitForLock()
+                self.dbLock = True
                 
                 cutoff = 0
                 count = self.rowcount()
@@ -78,7 +74,7 @@ class Storage:
             except:
                 log.error("Vacuuming database failed", exc_info = 1)
             finally:
-                self.unsetLocks("rwd")
+                self.dbLock = False
                 log.debug("Size: {}, Capacity: {}".format(self.size(), self.capacity))
     
     def size(self):
@@ -90,8 +86,7 @@ class Storage:
     def put(self, packets):
         log.info("Inserting {} packets".format(len(packets)))
         try:
-            self.waitForLocks("w")
-            self.setLocks("wd")
+            self.waitForLock()
             
             conn = sqlite3.connect(self.dbFile())
             with conn:
@@ -99,20 +94,13 @@ class Storage:
                     packet = (long(time.time() * 1000) if p[0] is None else long(p[0]), buffer(p[1]))
                     conn.execute("INSERT INTO packets VALUES(?, ?)", packet)
                 conn.commit()
-            self.unsetLocks("d")
             self.vaccum()
         except Exception:
             log.error("Failed to insert packets into db", exc_info = 1)
-        finally:
-            self.unsetLocks("wd")
             
     def get(self, since = 0, to = 0, limit = 0):
         try:
-            self.waitForLocks("r")
-            self.setLocks("d")
-            self.addPending()
-            if self.delSent:
-                self.setLocks("w")
+            self.waitForLock()
             
             to = long(to) if to > 0 else long(2 ** 63 - 1)
             since = long(since)
@@ -140,8 +128,6 @@ class Storage:
             
         except Exception:
             log.error("Failed to retrieve packets from db", exc_info = 1)
-            self.unsetLocks("d")
-            
             return None, 0
         
     def closeConn(self, connId):
@@ -150,32 +136,19 @@ class Storage:
             return
         try:
             del self.connections[connId]
-            if not self.delSent:
-                self.subPending
             conn.close()
         except:
             log.warn("Error closing connection to db", exc_info = 1)
-        finally:
-            if self.getsPending == 0:
-                self.unsetLocks("d")
-            if not self.delSent:
-                self.unsetLocks("w")
         
         
-    def rowcount(self, since = 0, to = 0, limit = 0):
+    def rowcount(self):
         try:
             conn = sqlite3.connect(self.dbFile())
             c = conn.cursor()
-            if since == 0 and to == 0 and limit is None:
-                c.execute("SELECT count(*) FROM packets")
-            else:
-                to = long(to) if to > 0 else long(2 ** 63 - 1)
-                since = long(since)
-                c.execute("SELECT count(*) FROM packets WHERE timestamp > ? AND timestamp < ? LIMIT ?", 
-                          (since, to, limit))
-            size = c.fetchone()[0]
+            c.execute("SELECT count(*) FROM packets")
+            count = c.fetchone()[0]
             conn.close()
-            return size
+            return count
         except:
             log.error("Failed to retrieve packet count", exc_info = 1)
             return 0
@@ -215,24 +188,26 @@ class Storage:
             self.closeConn(connId)
             return []
     
-    def deleteSent(self, since, to, limit):
-        if self.delSent:
-            log.info("Deleting sent packets")
-            try:
-                self.waitForLocks("d")
-                self.setLocks("rwd")
-                with sqlite3.connect(self.dbFile()) as conn:
-                    conn = sqlite3.connect(self.dbFile())
-                    c = conn.cursor()
-                    c.execute("DELETE FROM packets WHERE timestamp <= ?", (since, to, limit))
-                    conn.commit()
-            except:
-                log.exception("Could not delete sent packets")
-            finally:
-                self.unsetLocks("d")
-                self.subPending
-                if self.getsPending == 0:
-                    self.unsetLocks("rw")
+    def delete(self, since, to):
+        try:
+            self.waitForLock()
+            self.dbLock = True
+            
+            to = long(to) if to > 0 else long(2 ** 63 - 1)
+            since = long(since)
+            log.info("Deleting packets (since={}, to={})".format(since, to))
+            
+            with sqlite3.connect(self.dbFile()) as conn:
+                conn = sqlite3.connect(self.dbFile())
+                c = conn.cursor()
+                c.execute("DELETE FROM packets WHERE timestamp <= ?", (since, to))
+                count = c.rowcount
+                conn.commit()
+                log.info("Deleted {} packets".format(count))
+        except:
+            log.exception("Could not delete sent packets")
+        finally:
+            self.dbLock = False
         
     def release(self, connId):
         if connId in self.connections:
@@ -244,31 +219,11 @@ class Storage:
                     pass
             del self.connections[connId]
             
-    def addPending(self):
-        self.getsPending += 1
-        
-    def subPending(self):
-        if self.getsPending < 0:
-            self.getsPending = 0
-            log.error("Pending gets dropped below zero")
-            
-    def waitForLocks(self, mode):
+    def waitForLock(self):
         t0 = time.time()
         tau = 0.0
         dt = 0.05
-        cond = lambda: (
-            ("r" in mode and self.readLock) or  
-            ("w" in mode and self.writeLock) or 
-            ("d" in mode and self.deleteLock)
-        )
-#        if "r" in mode and "w" in mode:
-#            cond = lambda: self.writeLock or self.readLock
-#        elif "r" in mode:
-#            cond = lambda: self.readLock
-#        elif "w" in mode:
-#            cond = lambda: self.writeLock
-#        else:  
-        while cond():
+        while self.dbLock:
             time.sleep(dt)
             tau += dt
             if tau >= 1.0:
@@ -277,22 +232,6 @@ class Storage:
             if time.time() - t0 > self.timeout:
                 raise StorageTimeout("Database request timed out")
     
-    def setLocks(self, mode):
-        if "r" in mode:
-            self.readLock = True
-        if "w" in mode:
-            self.writeLock = True
-        if "d" in mode:
-            self.deleteLock = True
-            
-    def unsetLocks(self, mode):
-        if "r" in mode:
-            self.readLock = False
-        if "w" in mode:
-            self.writeLock = False
-        if "d" in mode:
-            self.deleteLock = False
-            
     def debuffer(self, result):
         return [(t, str(d)) for t, d in result]
     

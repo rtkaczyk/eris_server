@@ -153,7 +153,7 @@ def main():
                       help = "Limit number of packets to retrieve [default = 10]")
     pGet.set_defaults(func = get)
     
-    pCount = subparsers.add_parser("packet-count")
+    pCount = subparsers.add_parser("count")
     pCount.set_defaults(func = count)
     
     pClean = subparsers.add_parser("clean-storage")

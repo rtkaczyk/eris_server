@@ -19,6 +19,7 @@ class BtServer(threading.Thread):
         self.channel = conf.get("rfcomm_channel", cast = config.channel, default = 2)
         self.batch = conf.get("batch_size", cast = config.positiveInt, default = 10)
         self.timeout = conf.get("timeout", cast = config.positiveFloat, default = 10.0)
+        self.delSent = conf.get("delete_sent", cast = config.boolean, default = False)
         
         self.running = True
         
@@ -78,6 +79,12 @@ class BtServer(threading.Thread):
                 self.closeSockets()
                 
     def processRequest(self):
+        timerange = (2 ** 63, 0)
+        def updateTimerange(frm, to):
+            f = min(timerange[0], frm)
+            t = max(timerange[1], to)
+            return (f, t)
+        
         try:
             n = self.readLen(self.client_sock)
             log.debug("Request is {} bytes long".format(n))
@@ -99,6 +106,7 @@ class BtServer(threading.Thread):
                 response = bt_pb2.Response()
                 packets = self.storage.fetch(connId, n = batch)
                 if len(packets) > 0:
+                    timerange = updateTimerange(packets[0][0], packets[-1][0])
                     if not full:
                         response.to = packets[0][0]
                         response.frm = packets[-1][0]
@@ -123,7 +131,8 @@ class BtServer(threading.Thread):
             if n == packetCount:
                 self.writeLen(self.client_sock, 1)
                 log.info("{} packets sent".format(n))
-                self.storage.deleteSent(request.frm, request.to, request.limit)
+                if self.delSent:
+                    self.storage.delete(*timerange)
             else:
                 log.warn("Client did not respond with correct number of packets. Expected: {}, actual: {}".
                          format(packetCount, n))

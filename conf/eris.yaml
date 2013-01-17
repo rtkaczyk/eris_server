@@ -6,15 +6,15 @@ bluetooth:
   rfcomm_channel: 2
   batch_size: 10
   timeout: 10.0
+  delete_sent: fAlse
 
 storage:
-  timeout: 5.0
   capacity: 50
   vacuum_percent: 20.0
-  delete_sent: false
+  timeout: 5.0
 
 retriever:
-  interval: 60
+  interval: 60.0
   mask: .*\.xml
   timestamp: BY_NAME
   feed: ${WORK_DIR}/feed

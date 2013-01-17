@@ -40,12 +40,15 @@ class Retriever(threading.Thread):
         lastTry = 0.0
          
         while self.running:
-            dt = time.time()
-            if (dt - self.interval > lastTry):
-                lastTry = dt
+            tau = time.time()
+            if (tau - self.interval > lastTry):
+                lastTry = tau
                 
                 files = self.getFiles()
-                log.info("{} files retrieved".format(len(files)))
+                if len(files) > 0:
+                    log.info("{} files retrieved".format(len(files)))
+                else:
+                    log.debug("0 files retrieved")
                 for f in files:
                     if not self.running:
                         break
@@ -70,8 +73,8 @@ class Retriever(threading.Thread):
         try:
             with open(join(self.feed, f)) as o:
                 data = o.read()
-                time = self.getTime(f)
-                self.storage.put([(time, data)])
+                timestamp = self.getTime(f)
+                self.storage.put([(timestamp, data)])
                 log.debug("Inserted data from file [{}]".format(f))
                 try:
                     remove(join(self.feed, f))
@@ -81,13 +84,13 @@ class Retriever(threading.Thread):
             log.error("Error while trying to insert new data from file [{}]".format(f), exc_info = 1)
             
     def getTime(self, f):
-        if self.strategy == BY_NAME:
-            return "".join(takewhile(lambda c: c.isdigit(), f))
-        else:
-            try:
+        try:
+            if self.strategy == BY_NAME:
+                return long("".join(takewhile(lambda c: c.isdigit(), f)))
+            else:
                 return long(getmtime(join(self.feed, f)) * 1000)
-            except:
-                log.error("Couldn't get file [{}] modification date", exc_info = 1)
-                return long(time.time() * 1000)
-    
+        except:
+            log.error("Couldn't evaluate packet's timestamp, using current time", exc_info = 1)
+            return long(time.time() * 1000)
+
     

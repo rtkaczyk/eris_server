@@ -34,7 +34,7 @@ class Retriever(threading.Thread):
     
     def run(self):
         if self.running:
-            log.debug("retriever running")
+            log.info("retriever running")
         
         sleepPeriod = min(self.interval, 0.2)
         lastTry = 0.0

@@ -3,6 +3,14 @@ import os, yaml, sys, logging.config, Pyro4, traceback
 
 log = logging.getLogger("eris")
 
+def genConnId():
+    connId = 0
+    while True:
+        connId += 1
+        if connId >= 2 ** 31:
+            connId = 1
+        yield connId
+
 class Config:
     def __init__(self, dic):
         self.dic = dic if isinstance(dic, dict) else {}

@@ -47,13 +47,16 @@ class Eris:
         
     def stop(self):
         log.info("Closing eris")
-        self.btserver.kill()
-        self.retriever.kill()
         try:
+            self.btserver.kill()
+            self.retriever.kill()
+            self.retriever.join(1.0)
+            self.btserver.join(1.0)
+
             with open(config.statusFile, "w"):
                 pass
         except: 
-            pass
+            log.exception("Something went wrong while shutting down")
         self.running = False
     
     def status(self):

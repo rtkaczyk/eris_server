@@ -2,6 +2,7 @@ import os, sys, sqlite3, logging, time
 from os import path
 
 import config
+from config import genConnId
 
 log = logging.getLogger("storage")
 VAC_BATCH = 1024
@@ -27,6 +28,7 @@ class Storage:
             sys.exit(1)
         
         self.connections = {}
+        self.connectionId = genConnId()
         log.info("Database initialized")
         
     def vaccum(self):
@@ -43,7 +45,7 @@ class Storage:
                     log.info("Vacuuming storage. About to delete {}% packets".format(self.vacPercent * 100))
                     conn = sqlite3.connect(self.dbFile())
                     c = conn.cursor()
-                    c.execute("SELECT timestamp FROM packets")
+                    c.execute("SELECT timestamp FROM packets ORDER BY timestamp ASC")
                     if count <= 0:
                         log.error("Storage size is over limit, but there are no packets. Verify configuration")
                         return
@@ -122,7 +124,7 @@ class Storage:
                 count = cursor.fetchone()[0]
                 cursor.execute("SELECT timestamp, data FROM packets WHERE timestamp > ? AND timestamp < ? " + 
                                "ORDER BY timestamp DESC", (since, to))
-            connId = self.getConnId()
+            connId = self.connectionId.next()
             self.connections[connId] = (conn, cursor)
             return connId, count
             
@@ -165,10 +167,10 @@ class Storage:
                 self.closeConn(connId)
                 return []
             else:
-                log.info("Fetched {} packets".format(len(result)))
+                log.debug("Fetched {} packets".format(len(result)))
                 return self.debuffer(result)
         except Exception:
-            log.error("Failed to fetch packets from db", exc_info = 1)
+            log.exception("Failed to fetch packets from db")
             self.closeConn(connId)
             return []
     
@@ -179,14 +181,14 @@ class Storage:
 
         try:
             result = cursor.fetchall()
-            conn.close()
-            del self.connections[connId]
-            log.info("Fetched {} packets".format(len(result)))
+            log.debug("Fetched {} packets".format(len(result)))
             return self.debuffer(result)
         except Exception:
-            log.error("Failed to fetch packets from db", exc_info = 1)
-            self.closeConn(connId)
+            log.exception("Failed to fetch packets from db")
             return []
+        finally:
+            self.closeConn(connId)
+            
     
     def delete(self, since, to):
         try:
@@ -200,7 +202,7 @@ class Storage:
             with sqlite3.connect(self.dbFile()) as conn:
                 conn = sqlite3.connect(self.dbFile())
                 c = conn.cursor()
-                c.execute("DELETE FROM packets WHERE timestamp <= ?", (since, to))
+                c.execute("DELETE FROM packets WHERE timestamp >= ? AND timestamp <= ?", (since, to))
                 count = c.rowcount
                 conn.commit()
                 log.info("Deleted {} packets".format(count))
@@ -238,11 +240,3 @@ class Storage:
     @staticmethod    
     def dbFile():
         return os.path.join(config.workDir, "eris.db")
-    
-    def getConnId(self):
-        connId = 0
-        while True:
-            connId += 1
-            if connId >= 2 ** 31:
-                connId = 1
-            yield connId

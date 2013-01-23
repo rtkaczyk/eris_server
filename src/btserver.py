@@ -15,7 +15,7 @@ class BtServer(threading.Thread):
         
         conf = config.getSub("bluetooth")
         self.channel = conf.get("rfcomm_channel", cast = config.channel, default = 2)
-        self.batch = conf.get("batch_size", cast = config.positiveInt, default = 10)
+        self.batch = conf.get("batch", cast = config.positiveInt, default = 100)
         self.timeout = conf.get("timeout", cast = config.positiveFloat, default = 10.0)
         self.delSent = conf.get("delete_sent", cast = config.boolean, default = False)
         

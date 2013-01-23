@@ -29,6 +29,7 @@ class Retriever(threading.Thread):
         self.mask = re.compile(conf.get("mask", default = ".*"))
         self.strategy = conf.get("timestamp", cast = Retriever.castStrategy, default = BY_MTIME)
         self.feed = conf.get("feed", cast = config.directory, default = join(config.workDir, "feed"))
+        self.batchSize = conf.get("batch", cast = config.positiveInt, default = 1)
         
         self.running = self.interval > 0.0
     
@@ -49,10 +50,19 @@ class Retriever(threading.Thread):
                     log.info("{} files retrieved".format(len(files)))
                 else:
                     log.debug("0 files retrieved")
+                    
+                filesBatch = []
                 for f in files:
                     if not self.running:
                         break
-                    self.put(f)
+                    filesBatch.append(f)
+                    if len(filesBatch) == self.batchSize:
+                        self.put(filesBatch)
+                    filesBatch = []
+                    
+                if len(filesBatch) > 0:
+                    self.put(filesBatch)
+                    
             time.sleep(sleepPeriod)
     
     def kill(self):
@@ -69,19 +79,24 @@ class Retriever(threading.Thread):
             log.error("Error while listing directory", exc_info = 1)
             return []
     
-    def put(self, f):
+    def put(self, files):
         try:
-            with open(join(self.feed, f)) as o:
-                data = o.read()
-                timestamp = self.getTime(f)
-                self.storage.put([(timestamp, data)])
-                log.debug("Inserted data from file [{}]".format(f))
+            packets = []
+            for f in files:
+                with open(join(self.feed, f)) as o:
+                    data = o.read()
+                    timestamp = self.getTime(f)
+                    packets.append((timestamp, data))
+                    log.debug("Inserting data from file [{}]".format(f))
+                
+            self.storage.put(packets)
+            for f in files:
                 try:
                     remove(join(self.feed, f))
                 except:
                     log.error("Couldn't remove file [{}]".format(f), exc_info = 1)
         except:
-            log.error("Error while trying to insert new data from file [{}]".format(f), exc_info = 1)
+            log.error("Error while retrieving data".format(f), exc_info = 1)
             
     def getTime(self, f):
         try:

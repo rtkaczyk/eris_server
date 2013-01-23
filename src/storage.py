@@ -21,7 +21,7 @@ class Storage:
         try:
             conn = sqlite3.connect(self.dbFile())
             with conn:
-                conn.execute("CREATE TABLE IF NOT EXISTS packets (timestamp UNSIGNED INT8, data BLOB)")
+                conn.execute("CREATE TABLE IF NOT EXISTS packets (timestamp INT8, data BLOB)")
             self.vaccum()
         except Exception:
             log.critical("Failed to initialize database", exc_info = 1)

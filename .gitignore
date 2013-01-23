@@ -1,7 +1,9 @@
 bin/
 logs/
 work/
+tmp/
 
 .project
 .pydevproject
 *.pyc
+*.tgz

@@ -1,4 +1,4 @@
-if [ -d "conf" ] && [ -d "work" ] && [ -d "logs" ] && [ -d "bin" ]
+if [ -d "conf" ] && [ -d "work" ] && [ -d "logs" ] && [ -d "src" ]
 then
 	export ERIS_BASEDIR=`pwd`
 	export PYTHONPATH=`pwd`/src:${PYTHONPATH}

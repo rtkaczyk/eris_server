@@ -58,7 +58,7 @@ class Retriever(threading.Thread):
                     filesBatch.append(f)
                     if len(filesBatch) == self.batchSize:
                         self.put(filesBatch)
-                    filesBatch = []
+                        filesBatch = []
                     
                 if len(filesBatch) > 0:
                     self.put(filesBatch)
